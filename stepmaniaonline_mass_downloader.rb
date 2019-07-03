@@ -94,8 +94,12 @@ class Downloader
     puts "#{file_name} will be saved under #{save_dir}"
 
     if File.exist? full_path
-      puts "File \"#{file_name}\" already exists in directory \"#{save_dir}\"! Skipping..."
-      return
+      if File.zero? full_path
+        puts "File \"#{file_name}\" already exists in directory \"#{save_dir}\, but it is empty and will be replaced!"
+      else
+        puts "File \"#{file_name}\" already exists in directory \"#{save_dir}\"! Skipping..."
+        return
+      end
     end
 
     begin
