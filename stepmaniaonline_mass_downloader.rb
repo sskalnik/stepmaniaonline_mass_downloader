@@ -28,10 +28,10 @@ class Downloader
   end
 
   def config!
-    @options = {start_index: 1234, end_index: 1235, proxy_port: nil, save_dir: './simfiles', s3_bucket: nil, aws_profile: 'stepmania'}
+    @options = {start_index: 1234, end_index: 1235, proxy_port: nil, save_dir: 'simfiles', s3_bucket: nil, aws_profile: 'stepmania'}
 
     option_parser = OptionParser.new do |option_parser|
-      option_parser.banner = 'Example usage: ./stepmaniaonline_mass_downloader.rb --start=1 --end=1234 -p 8118 -d ./simfiles -b my-s3-bucket.amazonaws.com'
+      option_parser.banner = 'Example usage: ./stepmaniaonline_mass_downloader.rb --start=1 --end=1234 -p 8118 -d simfiles -b my-s3-bucket.amazonaws.com'
       option_parser.on('-s', '--start=INTEGER', Integer, 'ID of first simfile ID to download') { |o| options[:start_index] = o }
       option_parser.on('-e', '--end=INTEGER', Integer, 'Last index of simfile ID range') { |o| options[:end_index] = o }
       option_parser.on('-p', '--proxy_port=INTEGER', Integer, 'Port number for local proxy') { |o| options[:proxy_port] = o }
@@ -132,12 +132,12 @@ class Downloader
     creds = Aws::SharedCredentials.new(profile_name: profile)
     s3 = Aws::S3::Resource.new(credentials: creds, profile: profile)
     key = File.basename(local_file)
-    obj = s3.bucket(bucket).object(local_file)
+    obj = s3.bucket(bucket).object(key)
+
     puts "Moving #{local_file} to S3 bucket #{bucket}..."
-    obj.upload_file(local_file)
-    puts "Successfully uploaded #{key}! Deleting #{local_file}..."
+    upload_status = obj.upload_file(local_file, {acl: 'public_read'})
+    puts "Successfully uploaded #{key}! Deleting #{local_file}..." if upload_status
     File.delete local_file
-    #obj.move_to({bucket: bucket, key: File.basename(local_file)})
   end
 
   # Loop through all of the simfile pack pages, downloading each pack
