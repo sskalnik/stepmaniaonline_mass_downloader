@@ -28,18 +28,23 @@ class Downloader
   end
 
   def config!
-    @options = {start_index: 1, end_index: 2, proxy_port: nil, save_dir: './simfiles'}
+    @options = {start_index: 1234, end_index: 1235, proxy_port: nil, save_dir: './simfiles', s3_bucket: nil, aws_profile: 'stepmania'}
 
     option_parser = OptionParser.new do |option_parser|
-      option_parser.banner = 'Example usage: ./stepmaniaonline_mass_downloader.rb --start=1 --end=1234 -p 8118'
+      option_parser.banner = 'Example usage: ./stepmaniaonline_mass_downloader.rb --start=1 --end=1234 -p 8118 -d ./simfiles -b my-s3-bucket.amazonaws.com'
       option_parser.on('-s', '--start=INTEGER', Integer, 'ID of first simfile ID to download') { |o| options[:start_index] = o }
       option_parser.on('-e', '--end=INTEGER', Integer, 'Last index of simfile ID range') { |o| options[:end_index] = o }
       option_parser.on('-p', '--proxy_port=INTEGER', Integer, 'Port number for local proxy') { |o| options[:proxy_port] = o }
       option_parser.on('-d', '--simfile_dir=STRING', String, 'Name of the directory where simfiles will be saved') { |o| options[:save_dir] = o }
+      option_parser.on('-b', '--s3_bucket=STRING', String, 'Name of the S3 bucket to which simfiles will be moved') { |o| options[:s3_bucket] = o }
+      option_parser.on('-a', '--aws_profile=STRING', String, 'AWS profile to use for S3 credentials, region, etc.') { |o| options[:aws_profile] = o }
     end
 
     option_parser.parse(ARGV)
-    pp options
+
+    if options[:s3_bucket]
+      require 'aws-sdk-s3'
+    end
   end
 
   def random_user_agent
@@ -53,6 +58,8 @@ class Downloader
     agent.max_history = 0 # No need to keep track!
     agent.max_file_buffer = 268435456 # Less than 256MB files are stored in memory
     agent.follow_meta_refresh = true # Follow "click if page doesn't automatically refresh"
+    agent.pluggable_parser['application/zip'] = Mechanize::Download
+    agent.pluggable_parser['application/octet-stream'] = Mechanize::Download
     agent
   end
 
@@ -114,10 +121,23 @@ class Downloader
       # Passing download_link.href => NoMethodError (undefined method `path' for #<String:0x00000000037cb930>)
       #pp download_link
       #downloader.new download_link
+      saved_file_name
     rescue StandardError => e
       puts e
       return
     end
+  end
+
+  def move_to_s3(local_file, bucket: options[:s3_bucket], profile: options[:aws_profile])
+    creds = Aws::SharedCredentials.new(profile_name: profile)
+    s3 = Aws::S3::Resource.new(credentials: creds, profile: profile)
+    key = File.basename(local_file)
+    obj = s3.bucket(bucket).object(local_file)
+    puts "Moving #{local_file} to S3 bucket #{bucket}..."
+    obj.upload_file(local_file)
+    puts "Successfully uploaded #{key}! Deleting #{local_file}..."
+    File.delete local_file
+    #obj.move_to({bucket: bucket, key: File.basename(local_file)})
   end
 
   # Loop through all of the simfile pack pages, downloading each pack
@@ -132,7 +152,8 @@ class Downloader
         puts e
         next
       end
-      download_simfile_pack(download_link)
+      local_file_path = download_simfile_pack(download_link)
+      move_to_s3(local_file_path) if options[:s3_bucket] && local_file_path
     end
   end
 end
