@@ -109,6 +109,13 @@ class Downloader
       end
     end
 
+    if options[:s3_bucket]
+      if already_uploaded? file_name
+        puts "#{file_name} already exists in the S3 bucket #{options[:s3_bucket]} and will not be downloaded (nor uploaded to S3 again, obviously)!"
+        return
+      end
+    end
+
     begin
       puts 'Clicking on the download button...'
       resp = agent.click download_link
@@ -126,6 +133,16 @@ class Downloader
       puts e
       return
     end
+  end
+
+  def already_uploaded?(local_file)
+    bucket = options[:s3_bucket]
+    profile = options[:aws_profile]
+    creds = Aws::SharedCredentials.new(profile_name: profile)
+    s3 = Aws::S3::Resource.new(credentials: creds, profile: profile)
+    key = File.basename(local_file)
+
+    s3.bucket(bucket).object(key).exists?
   end
 
   def move_to_s3(local_file, bucket: options[:s3_bucket], profile: options[:aws_profile])
