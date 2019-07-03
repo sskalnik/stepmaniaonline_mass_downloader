@@ -135,7 +135,7 @@ class Downloader
     obj = s3.bucket(bucket).object(key)
 
     puts "Moving #{local_file} to S3 bucket #{bucket}..."
-    upload_status = obj.upload_file(local_file, {acl: 'public_read'})
+    upload_status = obj.upload_file(local_file)
     puts "Successfully uploaded #{key}! Deleting #{local_file}..." if upload_status
     File.delete local_file
   end
