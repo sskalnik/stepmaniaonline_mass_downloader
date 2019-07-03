@@ -5,6 +5,12 @@ Please don't use this to hammer the target site on the regular.
 ## What is this?
 This is just a Mechanize-based Ruby script that takes start and end indices, then downloads each simfile pack by abusing the ability to "walk" the URLs following the pattern of "https://search.stepmaniaonline.net/pack/id/12345".
 
+## Installation
+The only dependency outside of the Ruby 2.5.x standard library is Mechanize and its dependencies:
+```bash
+$ bundle install
+```
+
 ## Help
 ```bash
 $ ./stepmaniaonline_mass_downloader.rb --help
