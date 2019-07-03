@@ -116,6 +116,7 @@ class Downloader
       end
     end
 
+    retries = 0
     begin
       puts 'Clicking on the download button...'
       resp = agent.click download_link
@@ -129,7 +130,18 @@ class Downloader
       #pp download_link
       #downloader.new download_link
       saved_file_name
+    rescue Mechanize::ResponseReadError => e
+      puts e
+      retries += 1
+      if retries > 2
+        puts "Failed after #{retries} attempts!"
+        return
+      end
+      puts "Sleeping for a bit and retrying (attempt # #{retries})..."
+      sleep retries * 60
+      retry
     rescue StandardError => e
+      puts 'Clicking the link and saving the file locally failed! See error below:'
       puts e
       return
     end
