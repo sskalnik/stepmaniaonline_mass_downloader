@@ -176,6 +176,7 @@ class Downloader
       begin
         puts 'Searching for the "Download" button for this simfile pack...'
         download_link = page.link(text: 'Download')
+        next unless download_link
         puts download_link.href
       rescue StandardError => e
         puts e
